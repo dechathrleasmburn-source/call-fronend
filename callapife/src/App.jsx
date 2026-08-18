@@ -3,9 +3,15 @@ import React, { useEffect, useState } from 'react'
 const App = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  
+  // State สำหรับ Add Product
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+
+  // State สำหรับ Add Category
+  const [catName, setCatName] = useState("");
+  const [catDescription, setCatDescription] = useState("");
 
   const loadProducts = () => {
     fetch("http://localhost:4000/api/products")
@@ -48,6 +54,22 @@ const App = () => {
       .catch((error) => console.error("Delete product error", error));
   };
 
+  // ฟังก์ชันสำหรับเพิ่ม Category
+  const handleAddCategory = () => {
+    fetch("http://localhost:4000/api/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: catName, description: catDescription })
+    })
+      .then((res) => res.json())
+      .then(() => {
+        loadProducts();
+        setCatName("");
+        setCatDescription("");
+      })
+      .catch((error) => console.error("Add category error", error));
+  };
+
   const handleDeleteCategory = (id) => {
     fetch(`http://localhost:4000/api/categories/${id}`, {
       method: "DELETE"
@@ -61,8 +83,9 @@ const App = () => {
     <div className='container mt-4 mb-5'>
       <h1 className='mb-3'>Products List</h1>
 
+      {/* ฟอร์มเพิ่มสินค้า (Add Product) */}
       <div className='card p-3 mb-4'>
-        <h5>Add products</h5>
+        <h5>Add product</h5>
         <div className='row g-2 mb-3'>
           <div className='col'>
             <input
@@ -126,6 +149,33 @@ const App = () => {
       </table>
 
       <h1 className='mb-3'>Categories List</h1>
+
+      {/* ฟอร์มเพิ่มหมวดหมู่ (Add Category) */}
+      <div className='card p-3 mb-4'>
+        <h5>Add category</h5>
+        <div className='row g-2 mb-3'>
+          <div className='col'>
+            <input
+              type="text"
+              className='form-control'
+              placeholder='Category Name'
+              value={catName}
+              onChange={(e) => setCatName(e.target.value)}
+            />
+          </div>
+          <div className='col'>
+            <input
+              type="text"
+              className='form-control'
+              placeholder='Description'
+              value={catDescription}
+              onChange={(e) => setCatDescription(e.target.value)}
+            />
+          </div>
+        </div>
+        <button className='btn btn-success' onClick={handleAddCategory}>Add Category</button>
+      </div>
+
       <table className='table table-bordered table-hover'>
         <thead className='table-primary'>
           <tr>
