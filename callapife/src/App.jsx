@@ -1,92 +1,169 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState, useEffect } from 'react';
+
+const API_URL = "http://localhost:4000/api/products";
+const CATEGORY_API_URL = "http://localhost:4000/api/categories"; // เพิ่มตัวแปรสำหรับ API Category เพื่อความสะอาดของโค้ด
 
 const App = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   
-  // State สำหรับ Add Product
+  // --- Product States ---
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [editingId, setEditingId] = useState(null);
 
-  // State สำหรับ Add Category
+  // --- Category States ---
   const [catName, setCatName] = useState("");
-  const [catDescription, setCatDescription] = useState("");
+  const [catDesc, setCatDesc] = useState("");
+  const [editingCatId, setEditingCatId] = useState(null); // เพิ่ม State สำหรับแก้ไข Category
 
-  const loadProducts = () => {
-    fetch("http://localhost:4000/api/products")
+  const loadData = () => {
+    fetch(API_URL)
       .then((res) => res.json())
-      .then((data) => setProducts(Array.isArray(data) ? data : []))
-      .catch((error) => console.error("Fetch products unsuccess", error));
+      .then((data) => setProducts(data))
+      .catch((error) => console.error("Fetch products unsuccess:", error));
 
-    fetch("http://localhost:4000/api/categories")
+    fetch(CATEGORY_API_URL)
       .then((res) => res.json())
-      .then((data) => setCategories(Array.isArray(data) ? data : []))
-      .catch((error) => console.error("Fetch categories unsuccess", error));
-  }
+      .then((data) => setCategories(data))
+      .catch((error) => console.error("Fetch categories unsuccess:", error));
+  };
 
   useEffect(() => {
-    loadProducts();
+    loadData();
   }, []);
 
-  const handleAdd = () => {
-    fetch("http://localhost:4000/api/products", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, price, stock })
-    })
-      .then((res) => res.json())
-      .then(() => {
-        loadProducts();
-        setName("");
-        setPrice("");
-        setStock("");
-      })
-      .catch((error) => console.error("Add product error", error));
+  // ==========================================
+  //                PRODUCTS
+  // ==========================================
+  const handleEdit = (product) => {
+    setEditingId(product.id);
+    setName(product.name);
+    setPrice(product.price);
+    setStock(product.stock);
   };
 
-  const handleDelelete = (id) => {
-    fetch(`http://localhost:4000/api/products/${id}`, {
+  const resetForm = () => {
+    setEditingId(null);
+    setName("");
+    setPrice("");
+    setStock("");
+  };
+
+  const handleSubmit = () => {
+    const productData = { name, price: Number(price), stock: Number(stock) };
+
+    if (editingId) {
+      fetch(`${API_URL}/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(productData)
+      })
+        .then((res) => res.json())
+        .then(() => {
+          loadData();
+          resetForm();
+        })
+        .catch((error) => console.error("Update product unsuccess:", error));
+    } else {
+      fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(productData)
+      })
+        .then((res) => res.json())
+        .then(() => {
+          loadData();
+          resetForm();
+        })
+        .catch((error) => console.error("Add product unsuccess:", error));
+    }
+  };
+
+  const handleDeleteProduct = (id) => {
+    fetch(`${API_URL}/${id}`, {
       method: "DELETE"
     })
-      .then((res) => res.json())
-      .then(() => loadProducts())
-      .catch((error) => console.error("Delete product error", error));
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(() => loadData())
+      .catch((error) => console.error("Delete product unsuccess:", error));
   };
 
-  // ฟังก์ชันสำหรับเพิ่ม Category
-  const handleAddCategory = () => {
-    fetch("http://localhost:4000/api/categories", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: catName, description: catDescription })
-    })
-      .then((res) => res.json())
-      .then(() => {
-        loadProducts();
-        setCatName("");
-        setCatDescription("");
+  // ==========================================
+  //               CATEGORIES
+  // ==========================================
+  
+  // ฟังก์ชันดึงข้อมูลมาใส่ฟอร์มตอนกดปุ่ม Edit Category
+  const handleEditCategory = (category) => {
+    setEditingCatId(category.id);
+    setCatName(category.name);
+    setCatDesc(category.description || "");
+  };
+
+  // ฟังก์ชันล้างฟอร์ม Category
+  const resetCatForm = () => {
+    setEditingCatId(null);
+    setCatName("");
+    setCatDesc("");
+  };
+
+  // ฟังก์ชัน Submit สำหรับ Category (ใช้ร่วมกันทั้ง Add และ Edit)
+  const handleCatSubmit = () => {
+    const categoryData = { name: catName, description: catDesc };
+
+    if (editingCatId) {
+      // Edit Category (PUT)
+      fetch(`${CATEGORY_API_URL}/${editingCatId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(categoryData)
       })
-      .catch((error) => console.error("Add category error", error));
+        .then((res) => res.json())
+        .then(() => {
+          loadData();
+          resetCatForm();
+        })
+        .catch((error) => console.error("Update category unsuccess:", error));
+    } else {
+      // Add Category (POST)
+      fetch(CATEGORY_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(categoryData)
+      })
+        .then((res) => res.json())
+        .then(() => {
+          loadData();
+          resetCatForm();
+        })
+        .catch((error) => console.error("Add category unsuccess:", error));
+    }
   };
 
   const handleDeleteCategory = (id) => {
-    fetch(`http://localhost:4000/api/categories/${id}`, {
+    fetch(`${CATEGORY_API_URL}/${id}`, {
       method: "DELETE"
     })
-      .then((res) => res.json())
-      .then(() => loadProducts())
-      .catch((error) => console.error("Delete category error", error));
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(() => loadData())
+      .catch((error) => console.error("Delete category unsuccess:", error));
   };
 
   return (
     <div className='container mt-4 mb-5'>
-      <h1 className='mb-3'>Products List</h1>
+      <h1 className='mb-4'>Products list</h1>
 
-      {/* ฟอร์มเพิ่มสินค้า (Add Product) */}
+      {/* Product Form */}
       <div className='card p-3 mb-4'>
-        <h5>Add product</h5>
-        <div className='row g-2 mb-3'>
+        <h5>{editingId ? "Edit Product" : "Add Product"}</h5>
+        <div className='row g-2'>
           <div className='col'>
             <input
               type="text"
@@ -100,7 +177,7 @@ const App = () => {
             <input
               type="number"
               className='form-control'
-              placeholder='Price'
+              placeholder='Product price'
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
@@ -109,15 +186,28 @@ const App = () => {
             <input
               type="number"
               className='form-control'
-              placeholder='Stock'
+              placeholder='Product Stock'
               value={stock}
               onChange={(e) => setStock(e.target.value)}
             />
           </div>
+          <div className='col-auto'>
+            <button 
+              className={editingId ? "btn btn-success" : "btn btn-primary"} 
+              onClick={handleSubmit}
+            >
+              {editingId ? "บันทึกการแก้ไข" : "เพิ่ม"}
+            </button>
+            {editingId && (
+              <button className="btn btn-secondary ms-2" onClick={resetForm}>
+                ยกเลิก
+              </button>
+            )}
+          </div>
         </div>
-        <button className='btn btn-primary' onClick={handleAdd}>Add Product</button>
       </div>
 
+      {/* Products Table */}
       <table className='table table-bordered table-striped mb-5'>
         <thead className='table-dark'>
           <tr>
@@ -125,20 +215,26 @@ const App = () => {
             <th>Name</th>
             <th>Price</th>
             <th>Amount</th>
-            <th>Manage</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {Array.isArray(products) && products.map((prd) => (
+          {products.map((prd) => (
             <tr key={prd.id}>
               <td>{prd.id}</td>
               <td>{prd.name}</td>
               <td>{prd.price}</td>
               <td>{prd.stock}</td>
               <td>
-                <button
-                  className='btn btn-danger btn-sm'
-                  onClick={() => handleDelelete(prd.id)}
+                <button 
+                  className='btn btn-warning btn-sm me-2' 
+                  onClick={() => handleEdit(prd)}
+                >
+                  Edit
+                </button>
+                <button 
+                  className='btn btn-danger btn-sm' 
+                  onClick={() => handleDeleteProduct(prd.id)}
                 >
                   Delete
                 </button>
@@ -148,12 +244,13 @@ const App = () => {
         </tbody>
       </table>
 
-      <h1 className='mb-3'>Categories List</h1>
+      {/* Categories Section */}
+      <h1 className='mb-4'>Categories list</h1>
 
-      {/* ฟอร์มเพิ่มหมวดหมู่ (Add Category) */}
+      {/* Category Form */}
       <div className='card p-3 mb-4'>
-        <h5>Add category</h5>
-        <div className='row g-2 mb-3'>
+        <h5>{editingCatId ? "Edit Category" : "Add Category"}</h5>
+        <div className='row g-2'>
           <div className='col'>
             <input
               type="text"
@@ -168,36 +265,51 @@ const App = () => {
               type="text"
               className='form-control'
               placeholder='Description'
-              value={catDescription}
-              onChange={(e) => setCatDescription(e.target.value)}
+              value={catDesc}
+              onChange={(e) => setCatDesc(e.target.value)}
             />
           </div>
+          <div className='col-auto'>
+            <button 
+              className='btn btn-success' 
+              onClick={handleCatSubmit}
+            >
+              {editingCatId ? "บันทึกการแก้ไข" : "Add Category"}
+            </button>
+            {editingCatId && (
+              <button className="btn btn-secondary ms-2" onClick={resetCatForm}>
+                ยกเลิก
+              </button>
+            )}
+          </div>
         </div>
-        <button className='btn btn-success' onClick={handleAddCategory}>Add Category</button>
       </div>
 
-      <table className='table table-bordered table-hover'>
-        <thead className='table-primary'>
+      {/* Categories Table */}
+      <table className='table table-bordered table-striped'>
+        <thead className='table-dark'>
           <tr>
             <th>ID</th>
             <th>Category Name</th>
             <th>Description</th>
-            <th>IsActive</th>
-            <th>CreatedAt</th>
-            <th>Manage</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {Array.isArray(categories) && categories.map((cat) => (
+          {categories.map((cat) => (
             <tr key={cat.id}>
               <td>{cat.id}</td>
               <td>{cat.name}</td>
-              <td>{cat.description}</td>
-              <td>{String(cat.isActive)}</td>
-              <td>{cat.createdAt}</td>
+              <td>{cat.description || '-'}</td>
               <td>
-                <button
-                  className='btn btn-danger btn-sm'
+                <button 
+                  className='btn btn-warning btn-sm me-2' 
+                  onClick={() => handleEditCategory(cat)}
+                >
+                  Edit
+                </button>
+                <button 
+                  className='btn btn-danger btn-sm' 
                   onClick={() => handleDeleteCategory(cat.id)}
                 >
                   Delete
@@ -208,7 +320,7 @@ const App = () => {
         </tbody>
       </table>
     </div>
-  )
-}
+  );
+};
 
-export default App
+export default App;
