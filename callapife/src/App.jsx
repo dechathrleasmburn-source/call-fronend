@@ -214,7 +214,7 @@ const App = () => {
             <th>ID</th>
             <th>Name</th>
             <th>Price</th>
-            <th>Amount</th>
+            <th>Amountd</th>
             <th>Actions</th>
           </tr>
         </thead>
